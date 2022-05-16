@@ -438,13 +438,10 @@ public int _MC_MenuHandler(Menu menu, MenuAction action, int param1, int param2)
 			if(!items)
 				items = menu.ItemCount;
 			
-			if(ItemIndex[param1] >= items)
-				ItemIndex[param1] = 0;
-			
 			char buffer[1];
-			while(ItemIndex[param1] >= 0)
+			while(ItemIndex[param1] > 0)
 			{
-				if(menu.GetItem(ItemIndex[param1], buffer, sizeof(buffer), items) && StyleCheck(items))
+				if(ItemIndex[param1] < items && menu.GetItem(ItemIndex[param1], buffer, sizeof(buffer), items) && StyleCheck(items))
 					break;
 				
 				ItemIndex[param1]--;

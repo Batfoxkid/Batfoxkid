@@ -30,11 +30,12 @@ public Action Command_Voicemenu(int client, int args)
 	
 	Menu menu = new Menu(Handler_Voicemenu);
 	
+	int mode = 1;
 	switch(InMenu[client])
 	{
 		case 1:
 		{
-			InMenu[client] = 2;
+			mode = 2;
 			
 			menu.AddItem("1 0", "Incoming");
 			menu.AddItem("1 1", "Spy!");
@@ -48,7 +49,7 @@ public Action Command_Voicemenu(int client, int args)
 		}
 		case 2:
 		{
-			InMenu[client] = 3;
+			mode = 3;
 			
 			menu.AddItem("2 0", "Help!");
 			menu.AddItem("2 1", "Battle Cry");
@@ -61,8 +62,6 @@ public Action Command_Voicemenu(int client, int args)
 		}
 		default:
 		{
-			InMenu[client] = 1;
-			
 			menu.AddItem("0 0", "MEDIC!");
 			menu.AddItem("0 1", "Thanks!");
 			menu.AddItem("0 2", "Go! Go! Go!");
@@ -79,6 +78,8 @@ public Action Command_Voicemenu(int client, int args)
 	menu.ExitButton = true;
 	menu.OptionFlags |= MENUFLAG_NO_SOUND;
 	menu.Display(client, MENU_TIME_FOREVER);
+	
+	InMenu[client] = mode;
 	return Plugin_Handled;
 }
 
