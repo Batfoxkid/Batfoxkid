@@ -125,8 +125,6 @@ public Action Command_MenuNext(int client, int args)
 			RequestFrame(Command_MenuFrame, pack);
 			pack.WriteCell(GetClientUserId(client));
 			pack.WriteCell(InMenu[client]);
-			
-			CancelClientMenu(client);
 			return Plugin_Handled;
 		}
 		else if(GetClientMenu(client) != MenuSource_Normal)
@@ -161,8 +159,6 @@ public Action Command_MenuBack(int client, int args)
 			RequestFrame(Command_MenuFrame, pack);
 			pack.WriteCell(GetClientUserId(client));
 			pack.WriteCell(InMenu[client] - 2);
-			
-			CancelClientMenu(client);
 			return Plugin_Handled;
 		}
 		else if(GetClientMenu(client) != MenuSource_Normal)

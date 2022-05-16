@@ -16,10 +16,11 @@
 #endif
 
 static StringMap MenuCallbacks;
-static bool Ignore;
+static bool IgnoreMenu;
+static bool IgnoreSelect;
 static Menu Displaying[MAXPLAYERS+1];
 static Handle MenuTimer[MAXPLAYERS+1];
-static int ItemIndex[MAXPLAYERS+1];
+static int ItemIndex[MAXPLAYERS+1] = {-1, ...};
 
 public void OnPluginStart()
 {
@@ -33,6 +34,9 @@ public void OnPluginStart()
 	RegConsoleCmd("menu_next", _MC_MenuNext, "Move to the next page on supported menus");
 	RegConsoleCmd("menu_back", _MC_MenuBack, "Move to back a page on supported menus");
 	RegConsoleCmd("menu_select", _MC_MenuSelect, "Select current item on supported menus");
+	RegConsoleCmd("menu_exit", _MC_MenuExit, "Go back or exit on supported menus");
+	
+	AddCommandListener(_MC_MenuHook, "menuselect");
 }
 
 static void SetCallbackOfHandle(Handle handle, MenuHandler handler)
@@ -90,7 +94,7 @@ static void ReshowMenu(int client, int pagination)
 	if(pagination)
 		pos = pos / pagination * pagination;
 	
-	Ignore = true;
+	IgnoreMenu = true;
 	
 	if(MenuTimer[client])
 		delete MenuTimer[client];
@@ -103,7 +107,7 @@ static void ReshowMenu(int client, int pagination)
 	#endif
 	
 	Displaying[client].DisplayAt(client, pos, MENU_TIME_FOREVER);
-	Ignore = false;
+	IgnoreMenu = false;
 }
 
 public Action _MC_MenuUp(int client, int args)
@@ -117,6 +121,7 @@ public Action _MC_MenuUp(int client, int args)
 			int style;
 			int pos = ItemIndex[client];
 			
+			// Go up to next option
 			while(pos > 0)
 			{
 				pos--;
@@ -130,18 +135,23 @@ public Action _MC_MenuUp(int client, int args)
 			
 			if(!found && Displaying[client].ExitBackButton)
 			{
+				IgnoreSelect = true;
 				ClientCommand(client, "slot8");
 				FakeClientCommand(client, "menuselect 8");
+				IgnoreSelect = false;
 			}
 			else if(!found && Displaying[client].ExitButton && ItemIndex[client] != -1)
 			{
+				IgnoreSelect = true;
 				ClientCommand(client, "slot10");
 				FakeClientCommand(client, "menuselect 0");
+				IgnoreSelect = false;
 			}
 			else
 			{
 				ReshowMenu(client, Displaying[client].Pagination);
 			}
+			
 			return Plugin_Handled;
 		}
 	}
@@ -158,6 +168,7 @@ public Action _MC_MenuDown(int client, int args)
 			int style;
 			int pos = ItemIndex[client];
 			
+			// Go down to next option
 			int items = Displaying[client].ItemCount - 1;
 			while(pos < items)
 			{
@@ -182,35 +193,73 @@ public Action _MC_MenuBack	(int client, int args)
 	{
 		if(Displaying[client])
 		{
+			if(ItemIndex[client] == -1)
+				ItemIndex[client] = 0;
+			
 			char buffer[1];
 			bool found;
 			int style;
-			int pos = ItemIndex[client];
 			int pagination = Displaying[client].Pagination;
 			
-			if(pos >= pagination)
+			int pos = ItemIndex[client] - pagination;
+			if(pos < 0)
+				pos = 0;
+			
+			// Go to back page with same slot
+			if(Displaying[client].GetItem(pos, buffer, sizeof(buffer), style) && StyleCheck(style))
 			{
-				pos -= pagination;
-				if(Displaying[client].GetItem(pos, buffer, sizeof(buffer), style) && StyleCheck(style))
-				{
-					ItemIndex[client] = pos;
-					found = true;
-				}
+				ItemIndex[client] = pos;
+				found = true;
 			}
 			
-			if(!found && Displaying[client].ExitBackButton)
+			if(!found)
 			{
-				ClientCommand(client, "slot8");
-				FakeClientCommand(client, "menuselect 8");
-			}
-			else if(!found && Displaying[client].ExitButton && ItemIndex[client] != -1)
-			{
-				ClientCommand(client, "slot10");
-				FakeClientCommand(client, "menuselect 0");
-			}
-			else
-			{
-				ReshowMenu(client, pagination);
+				// Go to back page with next option
+				pos = ((ItemIndex[client] / pagination) * pagination) - pagination + 1;
+				while(pos > 0)
+				{
+					pos--;
+					if(Displaying[client].GetItem(pos, buffer, sizeof(buffer), style) && StyleCheck(style))
+					{
+						ItemIndex[client] = pos;
+						found = true;
+						break;
+					}
+				}
+				
+				if(!found && Displaying[client].ExitBackButton)
+				{
+					IgnoreSelect = true;
+					ClientCommand(client, "slot8");
+					FakeClientCommand(client, "menuselect 8");
+					IgnoreSelect = false;
+				}
+				else
+				{
+					// Go up to next option
+					while(pos > 0)
+					{
+						pos--;
+						if(Displaying[client].GetItem(pos, buffer, sizeof(buffer), style) && StyleCheck(style))
+						{
+							ItemIndex[client] = pos;
+							found = true;
+							break;
+						}
+					}
+					
+					if(!found && Displaying[client].ExitButton && ItemIndex[client] != -1)
+					{
+						IgnoreSelect = true;
+						ClientCommand(client, "slot10");
+						FakeClientCommand(client, "menuselect 0");
+						IgnoreSelect = false;
+					}
+					else
+					{
+						ReshowMenu(client, Displaying[client].Pagination);
+					}
+				}
 			}
 			return Plugin_Handled;
 		}
@@ -224,38 +273,92 @@ public Action _MC_MenuNext(int client, int args)
 	{
 		if(Displaying[client])
 		{
+			if(ItemIndex[client] == -1)
+				ItemIndex[client] = 0;
+			
 			char buffer[1];
 			bool found;
 			int style;
-			int pos = ItemIndex[client];
 			int pagination = Displaying[client].Pagination;
 			
-			int items = Displaying[client].ItemCount;
-			if(pos + pagination < items)
+			int items = Displaying[client].ItemCount - 1;
+			int pos = ItemIndex[client] + pagination;
+			if(pos > items)
+				pos = items;
+			
+			// Go to next page with same slot
+			if(Displaying[client].GetItem(pos, buffer, sizeof(buffer), style) && StyleCheck(style))
 			{
-				pos += pagination;
-				if(Displaying[client].GetItem(pos, buffer, sizeof(buffer), style) && StyleCheck(style))
-				{
-					ItemIndex[client] = pos;
-					found = true;
-				}
+				ItemIndex[client] = pos;
+				found = true;
 			}
 			
 			if(!found)
 			{
-				items--;
+				// Go to next page with next option
+				pos = ((ItemIndex[client] / pagination) * pagination) + pagination - 1;
 				while(pos < items)
 				{
 					pos++;
 					if(Displaying[client].GetItem(pos, buffer, sizeof(buffer), style) && StyleCheck(style))
 					{
 						ItemIndex[client] = pos;
+						found = true;
 						break;
+					}
+				}
+				
+				if(!found)
+				{
+					// Go down to next option
+					pos = ItemIndex[client];
+					while(pos < items)
+					{
+						pos++;
+						if(Displaying[client].GetItem(pos, buffer, sizeof(buffer), style) && StyleCheck(style))
+						{
+							ItemIndex[client] = pos;
+							break;
+						}
 					}
 				}
 			}
 			
 			ReshowMenu(client, pagination);
+			return Plugin_Handled;
+		}
+	}
+	return Plugin_Continue;
+}
+
+public Action _MC_MenuExit(int client, int args)
+{
+	if(client)
+	{
+		if(Displaying[client])
+		{
+			if(ItemIndex[client] == -1)
+				ItemIndex[client] = 0;
+			
+			if(Displaying[client].ExitBackButton)
+			{
+				IgnoreSelect = true;
+				ClientCommand(client, "slot8");
+				FakeClientCommand(client, "menuselect 8");
+				IgnoreSelect = false;
+			}
+			else if(Displaying[client].ExitButton)
+			{
+				IgnoreSelect = true;
+				ClientCommand(client, "slot10");
+				FakeClientCommand(client, "menuselect 0");
+				IgnoreSelect = false;
+			}
+			else
+			{
+				ReshowMenu(client, Displaying[client].Pagination);
+			}
+			
 			return Plugin_Handled;
 		}
 	}
@@ -274,19 +377,31 @@ public Action _MC_MenuSelect(int client, int args)
 			int pagination = Displaying[client].Pagination;
 			if(pagination)
 			{
+				IgnoreSelect = true;
 				pagination = (ItemIndex[client] % pagination) + 1;
 				ClientCommand(client, "slot%d", pagination);
 				FakeClientCommand(client, "menuselect %d", pagination);
+				IgnoreSelect = false;
 			}
 			else
 			{
+				IgnoreSelect = true;
 				pagination = ItemIndex[client] + 1;
 				ClientCommand(client, "slot%d", pagination);
 				FakeClientCommand(client, "menuselect %d", pagination);
+				IgnoreSelect = false;
 			}
 			return Plugin_Handled;
 		}
 	}
+	return Plugin_Continue;
+}
+
+public Action _MC_MenuHook(int client, const char[] commands, int args)
+{
+	if(!IgnoreSelect)
+		ItemIndex[client] = -1;
+	
 	return Plugin_Continue;
 }
 
@@ -297,10 +412,13 @@ public Action _MC_MenuTimer(Handle timer, DataPack pack)
 	pack.Reset();
 	int client = pack.ReadCell();
 	
-	Ignore = true;
-	Displaying[client].DisplayAt(client, pack.ReadCell(), MENU_TIME_FOREVER);
-	Ignore = false;
-	
+	int pagination = Displaying[client].Pagination;
+	if(!pagination || ItemIndex[client] != -1 || Displaying[client].ItemCount <= pagination)
+	{
+		IgnoreMenu = true;
+		Displaying[client].DisplayAt(client, pack.ReadCell(), MENU_TIME_FOREVER);
+		IgnoreMenu = false;
+	}
 	return Plugin_Continue;
 }
 
@@ -311,7 +429,7 @@ public int _MC_MenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	{
 		case MenuAction_Display:
 		{
-			if(Ignore)
+			if(IgnoreMenu)
 				return 0;
 			
 			Displaying[param1] = menu;
@@ -334,7 +452,7 @@ public int _MC_MenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		}
 		case MenuAction_Cancel:
 		{
-			if(Ignore)
+			if(IgnoreMenu)
 				return 0;
 			
 			Displaying[param1] = null;
@@ -367,7 +485,7 @@ public int _MC_MenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		}
 		default:
 		{
-			if(Ignore)
+			if(IgnoreMenu)
 				return 0;
 		}
 	}
