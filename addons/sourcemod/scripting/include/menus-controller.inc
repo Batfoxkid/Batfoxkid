@@ -97,7 +97,10 @@ static void ReshowMenu(int client, int pagination)
 	IgnoreMenu = true;
 	
 	if(MenuTimer[client])
+	{
 		delete MenuTimer[client];
+		MenuTimer[client] = null;
+	}
 	
 	#if RedisplayRate != 0.0
 	DataPack pack;

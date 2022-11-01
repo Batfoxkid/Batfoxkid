@@ -9,6 +9,14 @@
 
 int InMenu[MAXTF2PLAYERS];
 
+public Plugin myinfo =
+{
+	name		=	"TF2: Voicemenu for Controllers",
+	author		=	"Batfoxkid",
+	description	=	"Allows a pop up voicemenu for controller users.",
+	version		=	"1.0"
+};
+
 public void OnPluginStart()
 {
 	if(GetEngineVersion() != Engine_TF2)
