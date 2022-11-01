@@ -73,7 +73,7 @@ public void OnClientCookiesCached(int client)
 			if(!buffer[0] || CheckCommandAccess(client, buffer, ADMFLAG_GENERIC))
 			{
 				LightRed[client] = num / 100000000;
-				num -= (LightLevel[client] * 100000000);
+				num -= (LightRed[client] * 100000000);
 				
 				LightGreen[client] = num / 1000000;
 				num -= (LightGreen[client] * 1000000);
