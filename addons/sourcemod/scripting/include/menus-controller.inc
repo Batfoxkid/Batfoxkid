@@ -95,16 +95,11 @@ static void ReshowMenu(int client, int pagination)
 		pos = pos / pagination * pagination;
 	
 	IgnoreMenu = true;
-	
-	if(MenuTimer[client])
-	{
-		delete MenuTimer[client];
-		MenuTimer[client] = null;
-	}
+	delete MenuTimer[client];
 	
 	#if RedisplayRate != 0.0
 	DataPack pack;
-	MenuTimer[client] = CreateDataTimer(RedisplayRate, _MC_MenuTimer, pack, TIMER_REPEAT);
+	MenuTimer[client] = CreateDataTimer(RedisplayRate, _MC_MenuTimer, pack, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 	pack.WriteCell(client);
 	pack.WriteCell(pos);
 	#endif
@@ -456,9 +451,7 @@ public int _MC_MenuHandler(Menu menu, MenuAction action, int param1, int param2)
 				return 0;
 			
 			Displaying[param1] = null;
-			
 			delete MenuTimer[param1];
-			MenuTimer[param1] = null;
 			
 			if(param2 == MenuCancel_Disconnected)
 				ItemIndex[param1] = -1;
@@ -479,9 +472,7 @@ public int _MC_MenuHandler(Menu menu, MenuAction action, int param1, int param2)
 		case MenuAction_Select:
 		{
 			Displaying[param1] = null;
-			
 			delete MenuTimer[param1];
-			MenuTimer[param1] = null;
 		}
 		default:
 		{
@@ -524,11 +515,10 @@ stock MenuMC CreateMenuExMC(Handle hStyle=INVALID_HANDLE, MenuHandler handler, M
 
 stock bool DisplayMenuMC(Handle menu, int client, int time)
 {
-	if(MenuTimer[client])
-		delete MenuTimer[client];
+	delete MenuTimer[client];
 	
 	DataPack pack;
-	MenuTimer[client] = CreateDataTimer(RedisplayRate, _MC_MenuTimer, pack, TIMER_REPEAT);
+	MenuTimer[client] = CreateDataTimer(RedisplayRate, _MC_MenuTimer, pack, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 	pack.WriteCell(client);
 	pack.WriteCell(0);
 	return DisplayMenu(menu, client, time);
@@ -536,11 +526,10 @@ stock bool DisplayMenuMC(Handle menu, int client, int time)
 	
 stock bool DisplayMenuAtItemMC(Handle menu, int client, int first_item, int time)
 {
-	if(MenuTimer[client])
-		delete MenuTimer[client];
+	delete MenuTimer[client];
 	
 	DataPack pack;
-	MenuTimer[client] = CreateDataTimer(RedisplayRate, _MC_MenuTimer, pack, TIMER_REPEAT);
+	MenuTimer[client] = CreateDataTimer(RedisplayRate, _MC_MenuTimer, pack, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 	pack.WriteCell(client);
 	pack.WriteCell(first_item);
 	return DisplayMenuAtItem(menu, client, first_item, time);
