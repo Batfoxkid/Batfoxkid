@@ -112,6 +112,20 @@ methodmap DiscordRequest < StringMap
 		}
 	}
 	
+	property bool SupressError
+	{
+		public set(bool value)
+		{
+			this.SetValue("noerror", value);
+		}
+		public get()
+		{
+			bool value;
+			this.GetValue("noerror", value);
+			return value;
+		}
+	}
+	
 	property any Data
 	{
 		public set(any data)
@@ -287,25 +301,29 @@ public void _discordddatareceived(Handle request, bool failure, int offset, int 
 				Call_Finish();
 			}
 			
-			discord.Close();
-			
-			switch(statuscode)
+			if(!discord.SupressError)
 			{
-				case 401, 404:
+				switch(statuscode)
 				{
-					delete request;
-					LogError("Returned %d: Request is Invalid", statuscode);
-				}
-				case 403:
-				{
-					delete request;
-					LogError("Returned 403: Bot has no such permission to peform this");
-				}
-				default:
-				{
-					LogError("Returned %d", statuscode);
+					case 204:
+					{
+					}
+					case 401, 404:
+					{
+						LogError("Returned %d: Request is Invalid", statuscode);
+					}
+					case 403:
+					{
+						LogError("Returned 403: Bot has no such permission to peform this");
+					}
+					default:
+					{
+						LogError("Returned %d", statuscode);
+					}
 				}
 			}
+			
+			discord.Close();
 		}
 	}
 	else
