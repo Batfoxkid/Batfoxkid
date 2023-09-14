@@ -1,3 +1,7 @@
+#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 11
+	#error github.com/alliedmodders/sourcepawn/issues/671
+#endif
+
 #if defined _discordbot_included
 	#endinput
 #endif

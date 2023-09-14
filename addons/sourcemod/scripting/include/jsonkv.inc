@@ -71,7 +71,7 @@ static stock void ExportToStringSub(KeyValues kv, char[] json, int length, bool 
 				continue;
 			}
 			
-			static char buffer2[512];
+			static char buffer2[2048];
 			kv.GetString(NULL_STRING, buffer2, sizeof(buffer2));
 			if(array)
 			{
