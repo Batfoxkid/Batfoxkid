@@ -28,19 +28,17 @@
 	TopMenu - Skipped
 */
 
-static StringMap HandleList;
-static StringMap HandleMap;
+static StringMap HandleMapping;
 
 static void AddHandle(Handle handle)
 {
 	if(!handle)
 		return;
 	
-	if(!HandleList)
+	if(!HandleMapping)
 	{
 		RegServerCmd("sm_handledebug", RunHandleDebugger);
-		HandleList = new StringMap();
-		HandleMap = new StringMap();
+		HandleMapping = new StringMap();
 	}
 	
 	FrameIterator frame = new FrameIterator();
@@ -62,79 +60,62 @@ static void AddHandle(Handle handle)
 	char buffer[128];
 	FormatEx(buffer, sizeof(buffer), "Line %d, %s::%s, %s", line, filepath, header, code);
 	
-	int count;
-	HandleList.GetValue(buffer, count);
-	HandleList.SetValue(buffer, count + 1);
-	
-	CheckHandle(handle);
-	
 	char name[16];
 	IntToString(view_as<int>(handle), name, sizeof(name));
-	HandleMap.SetString(name, buffer);
-}
-
-static void CheckHandle(Handle handle)
-{
-	if(!IsValidHandle(handle))
-	{
-		char name[16], buffer[128];
-		IntToString(view_as<int>(handle), name, sizeof(name));
-		if(HandleMap.GetString(name, buffer, sizeof(buffer)))
-		{
-			HandleMap.Remove(name);
-			
-			int count;
-			if(HandleList.GetValue(buffer, count))
-			{
-				HandleList.SetValue(buffer, count - 1);
-			}
-			else
-			{
-				LogError("[HandleDebug] Missing \"%s\"", buffer);
-			}
-		}
-	}
-}
-
-static void CheckAllHandles()
-{
-	StringMapSnapshot snap = HandleMap.Snapshot();
-	int length = snap.Length;
-	for(int i; i < length; i++)
-	{
-		int size = snap.KeyBufferSize(i) + 1;
-		char[] name = new char[size];
-		snap.GetKey(i, name, size);
-		
-		Handle handle = view_as<Handle>(StringToInt(name));
-		CheckHandle(handle);
-	}
+	HandleMapping.SetString(name, buffer);
 }
 
 stock Action RunHandleDebugger(int args)
 {
-	if(HandleList)
+	if(HandleMapping)
 	{
 		char buffer[128];
 		GetPluginFilename(INVALID_HANDLE, buffer, sizeof(buffer));
 		PrintToServer(buffer);
 		
-		CheckAllHandles();
-		
-		StringMapSnapshot snap = HandleList.Snapshot();
+		StringMap map = new StringMap();
+
+		StringMapSnapshot snap = HandleMapping.Snapshot();
 		int length = snap.Length;
+		for(int i; i < length; i++)
+		{
+			int size = snap.KeyBufferSize(i) + 1;
+			char[] name = new char[size];
+			snap.GetKey(i, name, size);
+			
+			if(IsValidHandle(view_as<Handle>(StringToInt(name))))
+			{
+				HandleMapping.GetString(name, buffer, sizeof(buffer));
+				
+				int count;
+				map.GetValue(buffer, count);
+				map.SetValue(buffer, count + 1);
+			}
+			else
+			{
+				HandleMapping.Remove(name);
+			}
+		}
+
+		delete snap;
+
+		snap = map.Snapshot();
+		length = snap.Length;
 		for(int i; i < length; i++)
 		{
 			snap.GetKey(i, buffer, sizeof(buffer));
 			
-			int count;
-			if(HandleList.GetValue(buffer, count) && count)
-				PrintToServer("%s - %d", buffer, count);
+			int count = -1;
+			map.GetValue(buffer, count);
+			
+			PrintToServer("%s - %d", buffer, count);
 		}
+
+		delete snap;
+		delete map;
 	}
 	return Plugin_Handled;
 }
-
 
 methodmap ArrayListD < ArrayList
 {
@@ -347,7 +328,7 @@ stock KeyValuesD CreateKeyValuesD(const char[] name, const char[] firstKey="", c
 }
 public Action OnClientCommandKeyValues(int client, KeyValues kv)
 {
-	return Plugin_Continue;
+	return OnClientCommandKeyValuesD(client, view_as<KeyValuesD>(kv));
 }
 #define KeyValues KeyValuesD
 #define CreateKeyValues CreateKeyValuesD
