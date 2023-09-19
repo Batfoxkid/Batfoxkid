@@ -328,7 +328,7 @@ stock KeyValuesD CreateKeyValuesD(const char[] name, const char[] firstKey="", c
 }
 public Action OnClientCommandKeyValues(int client, KeyValues kv)
 {
-	return OnClientCommandKeyValuesD(client, view_as<KeyValuesD>(kv));
+	return Plugin_Continue;
 }
 #define KeyValues KeyValuesD
 #define CreateKeyValues CreateKeyValuesD
