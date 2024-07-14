@@ -18,6 +18,7 @@ static StringMap RateReset;
 static StringMap RateLeft;
 static StringMap RateLimit;
 static char buffer[16384];
+static int RateRetrys;
 
 methodmap DiscordRequest < StringMap
 {
@@ -146,6 +147,12 @@ methodmap DiscordRequest < StringMap
 	
 	public void Send()
 	{
+		if(RateRetrys > 49)
+		{
+			this.Close();
+			LogError("Bot has too many failed requests at %d amount, stopping all requests", RateRetrys);
+		}
+		
 		if(!RateReset)
 		{
 			RateReset = new StringMap();
@@ -177,10 +184,11 @@ methodmap DiscordRequest < StringMap
 					}
 					else
 					{
-						float delay = float(reset) - float(time);
-						if(delay > 60.0)
-							LogError("Bot is being rate limited to %.1f seconds", delay);
+						float delay = float(reset) - float(time) + (RateRetrys * 1.0);
+						//if(delay > 60.0)
+						//	LogError("Bot is being rate limited to %.1f seconds", delay);
 						
+						RateRetrys++;
 						CreateTimer(delay + 1.0, _discordbotretrysend, this);
 						return;
 					}
@@ -216,8 +224,14 @@ methodmap DiscordRequest < StringMap
 			SteamWorks_SetHTTPRequestContextValue(request, this);
 			SteamWorks_SendHTTPRequest(request);
 		}
+		else if(RateRetrys > 19)
+		{
+			this.Close();
+			LogError("Bot has too many failed requests at %d amount, stopping failed requests", RateRetrys);
+		}
 		else
 		{
+			RateRetrys++;
 			CreateTimer(2.0, _discordbotretrysend, this);
 		}
 	}
@@ -240,6 +254,7 @@ methodmap DiscordRequest < StringMap
 
 public Action _discordbotretrysend(Handle timer, DiscordRequest request)
 {
+	RateRetrys--;
 	request.Send();
 	return Plugin_Continue;
 }
@@ -309,7 +324,7 @@ public void _discordddatareceived(Handle request, bool failure, int offset, int 
 			{
 				switch(statuscode)
 				{
-					case 204:
+					case 204, 502:
 					{
 					}
 					case 401, 404:
