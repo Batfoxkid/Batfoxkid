@@ -147,12 +147,6 @@ methodmap DiscordRequest < StringMap
 	
 	public void Send()
 	{
-		if(RateRetrys > 49)
-		{
-			this.Close();
-			LogError("Bot has too many failed requests at %d amount, stopping all requests", RateRetrys);
-		}
-		
 		if(!RateReset)
 		{
 			RateReset = new StringMap();
@@ -223,11 +217,6 @@ methodmap DiscordRequest < StringMap
 			SteamWorks_SetHTTPRequestHeaderValue(request, "Authorization", buffer);
 			SteamWorks_SetHTTPRequestContextValue(request, this);
 			SteamWorks_SendHTTPRequest(request);
-		}
-		else if(RateRetrys > 19)
-		{
-			this.Close();
-			LogError("Bot has too many failed requests at %d amount, stopping failed requests", RateRetrys);
 		}
 		else
 		{
