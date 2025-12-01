@@ -145,6 +145,11 @@ methodmap DiscordRequest < StringMap
 		}
 	}
 	
+	public void SetTraceName(const char[] name)
+	{
+		this.SetString("trace", name);
+	}
+	
 	public void Send()
 	{
 		if(!RateReset)
@@ -311,22 +316,56 @@ public void _discordddatareceived(Handle request, bool failure, int offset, int 
 			
 			if(!discord.SupressError)
 			{
+				discord.GetString("trace", buffer, sizeof(buffer));
+				
 				switch(statuscode)
 				{
 					case 204, 502:
 					{
 					}
+					case 400:
+					{
+						LogError("'%s' returned 400: Request is invalid, dumped to 'logs/discordboterrors.txt'", buffer);
+						BuildPath(Path_SM, buffer, sizeof(buffer), "logs/discordboterrors.txt");
+						
+						File file = OpenFile(buffer, "a");
+						
+						discord.GetString("route", buffer, sizeof(buffer));
+						file.WriteLine("\"route\"\t\"%s\"", buffer);
+						
+						discord.GetString("url", buffer, sizeof(buffer));
+						file.WriteLine("\"url\"\t\"%s\"", buffer);
+						
+						int value = -9999999;
+						discord.GetValue("method", value);
+						file.WriteLine("\"method\"\t\"%d\"", value);
+						
+						Json json = discord.JsonBody;
+						if(json)
+						{
+							json.ExportToString(buffer, sizeof(buffer));
+							file.WriteLine(buffer);
+						}
+						else
+						{
+							file.WriteLine("No JsonBody");
+						}
+						
+						file.WriteLine("");
+						
+						file.Close();
+					}
 					case 401, 404:
 					{
-						LogError("Returned %d: Request is Invalid", statuscode);
+						LogError("'%s' returned %d: Authorization is invalid", buffer, statuscode);
 					}
 					case 403:
 					{
-						LogError("Returned 403: Bot has no such permission to peform this");
+						LogError("'%s' returned 403: Bot has no such permission to do this", buffer);
 					}
 					default:
 					{
-						LogError("Returned %d", statuscode);
+						LogError("'%s' returned %d", buffer, statuscode);
 					}
 				}
 			}
