@@ -1,7 +1,3 @@
-#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 11
-	#error github.com/alliedmodders/sourcepawn/issues/671
-#endif
-
 #if defined _discordbot_included
 	#endinput
 #endif
@@ -71,16 +67,16 @@ methodmap DiscordRequest < StringMap
 		}
 	}
 	
-	property SteamWorksHTTPBodyCallback Callback
+	property Function Callback
 	{
-		public set(SteamWorksHTTPBodyCallback callback)
+		public set(Function callback)
 		{
 			DataPack pack;
 			if(this.GetValue("callback", pack))
 				delete pack;
 			
 			pack = new DataPack();
-			pack.WriteFunction(view_as<Function>(callback));
+			pack.WriteFunction(callback);
 			this.SetValue("callback", pack);
 		}
 		public get()
@@ -90,20 +86,20 @@ methodmap DiscordRequest < StringMap
 				return INVALID_FUNCTION;
 			
 			pack.Reset();
-			return view_as<SteamWorksHTTPBodyCallback>(pack.ReadFunction());
+			return pack.ReadFunction();
 		}
 	}
 	
-	property SteamWorksHTTPDataReceived DataCallback
+	property Function DataCallback
 	{
-		public set(SteamWorksHTTPDataReceived callback)
+		public set(Function callback)
 		{
 			DataPack pack;
 			if(this.GetValue("databack", pack))
 				delete pack;
 			
 			pack = new DataPack();
-			pack.WriteFunction(view_as<Function>(callback));
+			pack.WriteFunction(callback);
 			this.SetValue("databack", pack);
 		}
 		public get()
@@ -113,7 +109,7 @@ methodmap DiscordRequest < StringMap
 				return _discordddatareceived;
 			
 			pack.Reset();
-			return view_as<SteamWorksHTTPDataReceived>(pack.ReadFunction());
+			return pack.ReadFunction();
 		}
 	}
 	
@@ -255,6 +251,7 @@ public Action _discordbotretrysend(Handle timer, DiscordRequest request)
 
 public int _discordbothttpcompleted(Handle request, bool failure, bool requestSuccessful, EHTTPStatusCode statuscode)
 {
+	return 0;
 }
 
 public void _discordheadersreceived(Handle request, bool failure, DiscordRequest discord)
@@ -304,7 +301,7 @@ public void _discordddatareceived(Handle request, bool failure, int offset, int 
 		}
 		else
 		{
-			SteamWorksHTTPBodyCallback callback = discord.Callback;
+			Function callback = discord.Callback;
 			if(callback != INVALID_FUNCTION)
 			{
 				Call_StartFunction(null, callback);
@@ -320,13 +317,13 @@ public void _discordddatareceived(Handle request, bool failure, int offset, int 
 				
 				switch(statuscode)
 				{
-					case 204, 502:
+					case 204, 502, 503:
 					{
 					}
 					case 400:
 					{
-						LogError("'%s' returned 400: Request is invalid, dumped to 'logs/discordboterrors.txt'", buffer);
 						BuildPath(Path_SM, buffer, sizeof(buffer), "logs/discordboterrors.txt");
+						LogError("'%s' returned 400: Request is invalid, dumped to '%s'", buffer);
 						
 						File file = OpenFile(buffer, "a");
 						
@@ -375,7 +372,7 @@ public void _discordddatareceived(Handle request, bool failure, int offset, int 
 	}
 	else
 	{
-		SteamWorksHTTPBodyCallback callback = discord.Callback;
+		Function callback = discord.Callback;
 		if(callback != INVALID_FUNCTION)
 		{
 			int size;
